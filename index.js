@@ -1,9 +1,7 @@
 const { default: makeWASocket, useSingleFileAuthState } = require('@whiskeysockets/baileys');
 const axios = require('axios');
 require('dotenv').config();
-const fs = require('fs');
 
-// Use creds.json for session
 const { state, saveState } = useSingleFileAuthState('./creds.json');
 
 async function connectBot() {
@@ -12,10 +10,8 @@ async function connectBot() {
     printQRInTerminal: true
   });
 
-  // Save session on changes
   sock.ev.on('creds.update', saveState);
 
-  // Handle incoming messages
   sock.ev.on('messages.upsert', async (m) => {
     const msg = m.messages[0];
     if (!msg.message || msg.key.fromMe) return;
@@ -24,7 +20,6 @@ async function connectBot() {
     const messageText = msg.message.conversation || msg.message.extendedTextMessage?.text;
 
     if (messageText) {
-      console.log(`Received: ${messageText}`);
       const reply = await getGeminiResponse(messageText);
       await sock.sendMessage(sender, { text: reply });
     }
@@ -45,10 +40,11 @@ async function getGeminiResponse(userInput) {
         }
       }
     );
-    return response.data.candidates[0]?.content?.parts[0]?.text || 'No response from Gemini.';
-  } catch (error) {
-    console.error('Gemini API error:', error.response?.data || error.message);
-    return 'Something went wrong with the AI.';
+
+    return response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Gemini returned no reply.";
+  } catch (err) {
+    console.error('Gemini error:', err.response?.data || err.message);
+    return "Failed to get a response from Gemini.";
   }
 }
 
